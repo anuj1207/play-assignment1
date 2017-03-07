@@ -1,16 +1,15 @@
 package controllers
 
-import javax.inject.Inject
-
+import com.google.inject.Inject
 import model.{Login, User}
-import play.api.cache.CacheApi
 import play.api.data._
 import play.api.data.Forms._
 import play.api.mvc._
-import sun.security.util.Password
+import services.ReadWrite
 
 
-class UserController @Inject() (cache: CacheApi) extends Controller{
+
+class UserController @Inject() (readWrite: ReadWrite) extends Controller{
 
   val userForm = Form(mapping(
     "firstName" -> nonEmptyText,
@@ -28,9 +27,6 @@ class UserController @Inject() (cache: CacheApi) extends Controller{
     "username" -> nonEmptyText,
     "password" -> nonEmptyText
   )(Login.apply)(Login.unapply))
-
-  val users = scala.collection.mutable.Map[String,User]("anuj1207" ->
-    User("Anuj","","Saxena","anuj1207","1234","9871463958","male",24,List()))
 
   def login = Action{
     Ok(views.html.login("hello"))
@@ -52,14 +48,13 @@ class UserController @Inject() (cache: CacheApi) extends Controller{
           println("Form successfully submitted >>>>>>>>>>>>>>>>>>>>>>>>>."+userData.toString)
           val newUser = model.User(userData.firstName,userData.midName,userData.lastName,
             userData.username,userData.password,userData.mobile,userData.gender,userData.age,userData.hobbies)
-          if(users.contains(newUser.username)){
-            Ok(views.html.signUp("User already exists"))
+          try {
+            val username = readWrite.write(newUser)
+            Redirect(routes.UserController.profile)
+              .withSession("connected" -> username)
           }
-          else{
-            users += newUser.username -> newUser
-            println(users)
-            cache.set(newUser.username,newUser)
-            Ok(views.html.profile(userData)).withSession("connected" -> newUser.username)
+          catch {
+            case ex:Exception => Ok(views.html.signUp(s"${ex.getMessage}"))
           }
         }
       )
@@ -75,31 +70,37 @@ class UserController @Inject() (cache: CacheApi) extends Controller{
         },
         userData => {
           println("Form successfully submitted >>>>>>>>>>>>>>>>>>>>>>>>>."+userData.toString)
-          val newUser = model.Login(userData.username,userData.password)
-          if(validateUser(newUser)){
-            cache.set(newUser.username,newUser)
-            Ok(views.html.profile(getUser(newUser.username)))
-              .withSession("connected" -> newUser.username)
+          val loginUser = model.Login(userData.username,userData.password)
+          try {
+            val username = readWrite.read(loginUser)
+            Redirect(routes.UserController.profile)
+              .withSession("connected" -> username)
           }
-          else{
-            Ok(views.html.login("User doesn't exists"))
+          catch {
+            case ex: Exception => Ok(views.html.login(ex.getMessage))
           }
         }
       )
   }
 
-  private def validateUser(userLogin :Login):Boolean = {
-    users.toList.exists(x=>x._1==userLogin.username && x._2.password==userLogin.password)
-  }
-
-  private def getUser(username: String):User = {
-    users.get(username) match {
-      case Some(x) => x
-    }
-  }
-
-  def logout = Action{
+  def logout = Action { implicit request =>
     Ok(views.html.index("")).withNewSession
+  }
+
+  def profile = Action { request =>
+    println("we came here")
+    request.session.get("connected").map { username =>
+      println("we came here too")
+      try {
+        val user = readWrite.accessUser(username)
+        Ok(views.html.profile(user))
+      }
+      catch {
+        case ex: Exception => Unauthorized(ex.getMessage)
+      }
+    }.getOrElse {
+      Unauthorized("Oops, you are not connected")
+    }
   }
 
 }
