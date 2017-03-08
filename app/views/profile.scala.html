@@ -70,7 +70,14 @@
     </div>
 
     <div class="form-group">
-        <div class="col-sm-offset-2 col-sm-10">
+        @if(@user.isAdmin==true){
+            <div class="col-sm-offset-2 col-sm-2">
+                <button id="manageUser" class="btn btn-default" formaction="@routes.UserController.userList">Manage Users</button>
+            </div>
+        }
+        <div class="col-sm-2">
+        </div>
+        <div class="col-sm-2">
             <button type="submit" class="btn btn-default">Logout</button>
         </div>
     </div>

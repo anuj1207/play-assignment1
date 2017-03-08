@@ -2,6 +2,7 @@ package controllers
 
 import com.google.inject.Inject
 import model.{Login, User}
+import org.mindrot.jbcrypt.BCrypt
 import play.api.data._
 import play.api.data.Forms._
 import play.api.mvc._
@@ -20,7 +21,9 @@ class UserController @Inject() (readWrite: ReadWrite) extends Controller{
     "mobile" -> nonEmptyText(minLength = 10,maxLength = 10),
     "gender" -> nonEmptyText,
     "age" -> number(min=18,max=75),
-    "hobbies" -> list(text)
+    "hobbies" -> list(text),
+    "isAdmin" -> boolean,
+    "isRevoked" -> boolean
   )(User.apply)(User.unapply))
 
   val loginForm = Form(mapping(
@@ -45,12 +48,14 @@ class UserController @Inject() (readWrite: ReadWrite) extends Controller{
           BadRequest(views.html.signUp("Error"))
         },
         userData => {
+          val passwordHash = BCrypt.hashpw(userData.password, BCrypt.gensalt())
           println("Form successfully submitted >>>>>>>>>>>>>>>>>>>>>>>>>."+userData.toString)
           val newUser = model.User(userData.firstName,userData.midName,userData.lastName,
-            userData.username,userData.password,userData.mobile,userData.gender,userData.age,userData.hobbies)
+            userData.username,passwordHash,userData.mobile,userData.gender,
+            userData.age,userData.hobbies, isAdmin, false)
           try {
             val username = readWrite.write(newUser)
-            Redirect(routes.UserController.profile)
+            Redirect(routes.UserController.profile())
               .withSession("connected" -> username)
           }
           catch {
@@ -58,6 +63,15 @@ class UserController @Inject() (readWrite: ReadWrite) extends Controller{
           }
         }
       )
+  }
+
+  private def isAdmin: Boolean = {
+    if(play.Play.application().configuration().getString("Type")=="Admin"){
+      true
+    }
+    else {
+      false
+    }
   }
 
   def validate = Action{
@@ -73,7 +87,7 @@ class UserController @Inject() (readWrite: ReadWrite) extends Controller{
           val loginUser = model.Login(userData.username,userData.password)
           try {
             val username = readWrite.read(loginUser)
-            Redirect(routes.UserController.profile)
+            Redirect(routes.UserController.profile())
               .withSession("connected" -> username)
           }
           catch {
@@ -101,6 +115,11 @@ class UserController @Inject() (readWrite: ReadWrite) extends Controller{
     }.getOrElse {
       Unauthorized("Oops, you are not connected")
     }
+  }
+
+  def userList = Action {
+    val listOfUser = (for(i<-readWrite.userList) yield readWrite.accessUser(i)).toList
+    Ok(views.html.userList(listOfUser))
   }
 
 }

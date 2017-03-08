@@ -26,3 +26,5 @@ POST    /submitData                 controllers.UserController.submitData
 POST    /validate                   controllers.UserController.validate
 
 GET     /logout                     controllers.UserController.logout
+
+GET     /userList                   controllers.UserController.userList
