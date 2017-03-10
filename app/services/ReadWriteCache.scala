@@ -6,12 +6,9 @@ import model.{Login, User}
 import org.mindrot.jbcrypt.BCrypt
 import play.api.cache.CacheApi
 
-import scala.collection.mutable.ListBuffer
 
 
 class ReadWriteCache @Inject() (cache: CacheApi) extends ReadWrite{
-
-  override val userList: ListBuffer[String] = ListBuffer[String]()
 
   override def write(newUser: User): String = {
     val user: Option[User] = cache.get[User](newUser.username)
@@ -19,6 +16,15 @@ class ReadWriteCache @Inject() (cache: CacheApi) extends ReadWrite{
       case Some(_) => throw new Exception("User Already Exists")
       case None =>
         cache.set(newUser.username,newUser)
+        val oldList = cache.get[List[String]]("userList")
+        oldList match {
+          case Some(list) =>
+            val newList = list:+newUser.username
+            cache.remove("userList")
+            cache.set("userList",newList)
+          case None =>
+            cache.set("userList", List[String](newUser.username))
+        }
         newUser.username
     }
   }
@@ -36,10 +42,32 @@ class ReadWriteCache @Inject() (cache: CacheApi) extends ReadWrite{
   }
 
   override def accessUser(username: String) : User = {
-    val user: Option[User] = cache.get[User](username)
+    val user = cache.get[User](username)
     user match {
-      case Some(x) => x
+      case Some(user) => user
       case None => throw new Exception("User Not Found")
+    }
+  }
+
+  override def getUserList: List[User] = {
+    cache.get[List[String]]("userList") match {
+      case Some(usernameList) =>
+        usernameList.map(username =>
+          cache.get[User](username) match {
+            case Some(user) => user
+            case None => throw new Exception("User Not Found")
+          })
+      case None => throw new Exception("No user Right Now")
+    }
+  }
+
+  override def resetUser(username: String, value: Boolean): Boolean = {
+    val user = accessUser(username)
+    user match {
+      case x: User =>
+        cache.set(x.username,x.copy(isRevoked = value))
+        true
+      case _ => false
     }
   }
 

@@ -36,8 +36,10 @@ class UserController @Inject() (readWrite: ReadWrite) extends Controller{
   }
 
   def signUp = Action{
+    println(">>>>>>>>>>>>>>>>>>>>>")
     Ok(views.html.signUp("sign it up"))
   }
+  private def isAdmin(): Boolean = play.Play.application().configuration().getString("Type") == "Admin"
 
   def submitData = Action {
     implicit request =>
@@ -52,7 +54,7 @@ class UserController @Inject() (readWrite: ReadWrite) extends Controller{
           println("Form successfully submitted >>>>>>>>>>>>>>>>>>>>>>>>>."+userData.toString)
           val newUser = model.User(userData.firstName,userData.midName,userData.lastName,
             userData.username,passwordHash,userData.mobile,userData.gender,
-            userData.age,userData.hobbies, isAdmin, false)
+            userData.age,userData.hobbies, isAdmin(), false)
           try {
             val username = readWrite.write(newUser)
             Redirect(routes.UserController.profile())
@@ -65,14 +67,7 @@ class UserController @Inject() (readWrite: ReadWrite) extends Controller{
       )
   }
 
-  private def isAdmin: Boolean = {
-    if(play.Play.application().configuration().getString("Type")=="Admin"){
-      true
-    }
-    else {
-      false
-    }
-  }
+
 
   def validate = Action{
     implicit request =>
@@ -107,6 +102,7 @@ class UserController @Inject() (readWrite: ReadWrite) extends Controller{
       println("we came here too")
       try {
         val user = readWrite.accessUser(username)
+        println(user.isAdmin)
         Ok(views.html.profile(user))
       }
       catch {
@@ -115,11 +111,6 @@ class UserController @Inject() (readWrite: ReadWrite) extends Controller{
     }.getOrElse {
       Unauthorized("Oops, you are not connected")
     }
-  }
-
-  def userList = Action {
-    val listOfUser = (for(i<-readWrite.userList) yield readWrite.accessUser(i)).toList
-    Ok(views.html.userList(listOfUser))
   }
 
 }

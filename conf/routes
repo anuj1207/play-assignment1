@@ -27,4 +27,6 @@ POST    /validate                   controllers.UserController.validate
 
 GET     /logout                     controllers.UserController.logout
 
-GET     /userList                   controllers.UserController.userList
+GET     /userList                   controllers.AuthorityController.userList
+
+GET    /changePermission           controllers.AuthorityController.changePermission(username: String, value: Boolean)

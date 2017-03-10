@@ -1,42 +1,19 @@
 @(message:String)
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    @* Here's where we render the page title `String`. *@
     <title>@message</title>
     <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("css/bootstrap.min.css")">
     <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("stylesheets/main.css")">
     <link rel="shortcut icon" type="image/png" href="@routes.Assets.versioned("images/favicon.png")">
+    <script src="@routes.Assets.versioned("js/jquery.min.js")" type="text/javascript"></script>
     <script src="@routes.Assets.versioned("js/bootstrap.min.js")" type="text/javascript"></script>
     <script src="@routes.Assets.versioned("javascripts/hello.js")" type="text/javascript"></script>
-    <script>
-        $(document).ready(function () {
-            $("#submit").click(function (e) {
-                e.preventDefault();
-                var matched,
-                    password = $("#password").val(),
-                    confirm = $("#confirmPassword").val();
-
-                matched = (password == confirm) ? true : false;
-                if(matched) {
-                    //Submit line commented out for example.  In production, remove the //
-                    //$("#passwordForm").submit();
-                    window.location.href = "@routes.UserController.submitData";
-                    //Shows success message and prevents submission.  In production, comment out the next 2 lines.
-                    //$("#responseDiv").html("Passwords Match");
-                    //return false;
-                }
-                else {
-                    alert("Password must match confirm password")
-                }
-            }
-        });
-    </script>
 </head>
 <body>
-@header(message)
-@* And here's where we render the `Html` object containing
-* the page content. *@
+@header(message,true)
+
 <form class="form-horizontal" action="@routes.UserController.submitData" method="post">
     <div class="form-group">
         <label class="control-label col-sm-2" for="firstName">First Name:</label>
